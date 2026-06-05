@@ -47,7 +47,7 @@ public class Main {
             // Lire chaque balise enfant
             site.port         = Integer.parseInt(getValeur(elem, "port"));
             site.DocumentRoot = getValeur(elem, "DocumentRoot");
-            site.DefaultIndex = (getValeur(elem, "DefaultIndex") == null ? "index.html" : getValeur(elem, "DefaultIndex"));
+            site.DefaultIndex = (getValeur(elem, "DefaultIndex") == null ? "var/www/index.html" : getValeur(elem, "DefaultIndex"));
             site.Acceslog     = getValeur(elem, "Acceslog");
             site.Errorlog     = getValeur(elem, "Errorlog");
 

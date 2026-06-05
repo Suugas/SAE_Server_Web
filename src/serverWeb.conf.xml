@@ -1,14 +1,14 @@
 <webconf>
  <site>
   <port>80</port>
-  <DocumentRoot>/var/www</DocumentRoot>
+  <DocumentRoot>C:\Users\Albar\OneDrive\Documents\Cour\SAE\S2\Server Web\SAE_Server_Web\src/var/www</DocumentRoot>
   <DefaultIndex>index.html</DefaultIndex>
   <Acceslog>/var/log/myweb/access.log</Acceslog>
   <Errorlog>/var/log/myweb/error.log</Errorlog>
  </site>
  <site>
   <port>8080</port>
-  <DocumentRoot>/var/www2</DocumentRoot>
+  <DocumentRoot>C:\Users\Albar\OneDrive\Documents\Cour\SAE\S2\Server Web\SAE_Server_Web\src/var/www2</DocumentRoot>
   <Acceslog>/var/log/myweb/access.log</Acceslog>
   <Errorlog>/var/log/myweb/error.log</Errorlog>
  </site>

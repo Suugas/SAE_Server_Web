@@ -50,7 +50,7 @@ public class Server {
             // Lire chaque balise enfant
             site.port         = Integer.parseInt(getValeur(elem, "port"));
             site.DocumentRoot = getValeur(elem, "DocumentRoot");
-            site.DefaultIndex = (getValeur(elem, "DefaultIndex") == null ? "index.html" : getValeur(elem, "DefaultIndex"));
+            site.DefaultIndex = getValeur(elem, "DefaultIndex");
             site.Acceslog     = getValeur(elem, "Acceslog");
             site.Errorlog     = getValeur(elem, "Errorlog");
 
@@ -65,78 +65,138 @@ public class Server {
         return liste.item(0).getTextContent().trim();
     }
 
-    public static void main(String[] args) throws IOException {
-        int port;
-        if (args.length >= 1) port = Integer.parseInt(args[1]);
-        else port=80;
-        ServerSocket serv=new ServerSocket(port);
-        while(true){
-            Socket sock=serv.accept();
-            BufferedReader br=new BufferedReader(new InputStreamReader(sock.getInputStream()));
-            String line=br.readLine();
-            String file=line.split(" ")[1];
-            if (file.equals("/")){
-                file="/index.html";
-            }
-            String ct=file.substring(file.lastIndexOf('.') + 1);
-            if(ct.equals("gif")||ct.equals("png")||ct.equals("jpg")||ct.equals("jpeg")){
-                file="/"+file;
-                ct="image/"+ct;
-            } else if (ct.equals("ico")) {
-                file="/images/"+file;
-                ct="image/x-icon";
-            } else{
-                ct="text/html";
-            }
-            File f=new File("../../fichiers du site web-20260507"+file);
-            byte[] b=Files.readAllBytes(f.toPath());
-            OutputStream os = sock.getOutputStream();
-            os.write("HTTP/1.1 200 OK\r\n".getBytes());
-            os.write(("Content-Type: "+ct+"\r\n").getBytes());
-            os.write(("Content-Length: "+b.length+"\r\n").getBytes());
-            os.write("\r\n".getBytes());
-            os.write(b);
-            sock.close();
-            br.close();
+    public static void main(String[] args) throws IOException, ParserConfigurationException, SAXException {
+        Server server = new Server();
+        server.Load();
+
+        for (Site s: server.sites) {
+            int port = s.port;
+            ServerSocket serv = new ServerSocket(port);
+            new Thread(() -> {
+                while (true) {
+                    Socket sock = null;
+                    try {
+                        sock = serv.accept();
+                    } catch (IOException e) {
+                        throw new RuntimeException(e);
+                    }
+                    try {
+                        Server.handleClient(sock, s);
+                    } catch (IOException e) {
+                        throw new RuntimeException(e);
+                    }
+                }
+
+            }).start();
         }
     }
 
-    private static void handleClient(Socket clientSocket) {
-        // Le bloc try-with-resources garantit la fermeture des flux
-        try (
-                BufferedReader in = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
-                PrintWriter out = new PrintWriter(clientSocket.getOutputStream(), true)
-        ) {
-            // 3. Lire la première ligne de la requête HTTP (ex: "GET /index.html HTTP/1.1")
-            String requestLine = in.readLine();
-            if (requestLine == null || requestLine.isEmpty()) return;
+    private static void handleClient(Socket clientSocket, Site site) throws IOException {
+        // 1. Un seul BufferedReader suffit
+        BufferedReader br = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
 
-            System.out.println("Requête : " + requestLine);
+        // 2. On lit la première ligne et on la stocke immédiatement
+        String line = br.readLine();
 
-            // 4. Construire la réponse HTTP
-            // Les en-têtes (Headers)
-            out.println("HTTP/1.1 200 OK"); // Code de succès
-            out.println("Content-Type: text/html; charset=UTF-8"); // Type de contenu
-            out.println("Connection: close"); // Demande au navigateur de fermer la connexion
+        // 3. On vérifie que la ligne n'est ni nulle, ni vide
+        if (line == null || line.trim().isEmpty()) {
+            clientSocket.close();
+            return;
+        }
 
-            // LIGNE VIDE OBLIGATOIRE séparant les headers du corps de la page
-            out.println();
+        // 4. On extrait la route demandée (ex: "/" ou "/image.png")
+        String file = line.split(" ")[1];
 
-            // Le corps de la réponse (Body)
-            out.println("<html><head><title>Mon Serveur</title></head>");
-            out.println("<body><h1>Bienvenue sur mon site !</h1>");
-            out.println("<p>Vous avez demandé : <strong>" + requestLine.split(" ")[1] + "</strong></p>");
-            out.println("</body></html>");
+        // ====================================================================
+        // NOUVELLE LOGIQUE : Gestion de la racine et de la liste des fichiers
+        // ====================================================================
+        if (file.equals("/")) {
+            if (site.DefaultIndex == null) {
+                // Cas où on n'a pas de fichier d'index : on liste le répertoire
+                File dir = new File(site.DocumentRoot);
+                StringBuilder html = new StringBuilder();
 
-        } catch (IOException e) {
-            System.err.println("Erreur avec le client : " + e.getMessage());
-        } finally {
-            // 5. Toujours refermer le socket pour libérer le port et le thread
-            try {
+                html.append("<html><head><meta charset=\"UTF-8\"><title>Index de /</title></head><body>");
+                html.append("<h1>Index de / (").append(site.DocumentRoot).append(")</h1><hr><ul>");
+
+                if (dir.exists() && dir.isDirectory()) {
+                    File[] files = dir.listFiles();
+                    if (files != null) {
+                        for (File child : files) {
+                            String name = child.getName();
+                            if (child.isDirectory()) {
+                                html.append("<li><a href=\"/").append(name).append("/\">📁 ").append(name).append("/</a></li>");
+                            } else {
+                                html.append("<li><a href=\"/").append(name).append("\">📄 ").append(name).append("</a></li>");
+                            }
+                        }
+                    }
+                } else {
+                    html.append("<li><em>Erreur : Le répertoire DocumentRoot n'existe pas ou n'est pas un dossier.</em></li>");
+                }
+                html.append("</ul><hr></body></html>");
+
+                // On envoie directement la réponse HTML générée
+                byte[] bHtml = html.toString().getBytes();
+                OutputStream os = clientSocket.getOutputStream();
+                os.write("HTTP/1.1 200 OK\r\n".getBytes());
+                os.write("Content-Type: text/html; charset=UTF-8\r\n".getBytes());
+                os.write(("Content-Length: " + bHtml.length + "\r\n").getBytes());
+                os.write("\r\n".getBytes());
+                os.write(bHtml);
+
                 clientSocket.close();
-            } catch (IOException e) {
-                e.printStackTrace();
+                return; // On arrête l'exécution ici !
+
+            } else {
+                // S'il y a un DefaultIndex, on remplace la racine "/" par ce fichier.
+                // On s'assure qu'il y a bien un "/" au début.
+                file = site.DefaultIndex.startsWith("/") ? site.DefaultIndex : "/" + site.DefaultIndex;
             }
+        }
+        // ====================================================================
+
+        // Récupération de l'extension pour le Content-Type
+        String ct = "text/html"; // Valeur par défaut
+        if (file.contains(".")) {
+            ct = file.substring(file.lastIndexOf('.') + 1);
+            if (ct.equals("gif") || ct.equals("png") || ct.equals("jpg") || ct.equals("jpeg")) {
+                ct = "image/" + ct;
+            } else if (ct.equals("ico")) {
+                ct = "image/x-icon";
+            } else {
+                ct = "text/html";
+            }
+        }
+
+        // Création du chemin vers le fichier demandé
+        File f = new File(site.DocumentRoot + file);
+
+        try {
+            byte[] b = Files.readAllBytes(f.toPath());
+            OutputStream os = clientSocket.getOutputStream();
+
+            os.write("HTTP/1.1 200 OK\r\n".getBytes());
+            os.write(("Content-Type: " + ct + "\r\n").getBytes());
+            os.write(("Content-Length: " + b.length + "\r\n").getBytes());
+            os.write("\r\n".getBytes()); // Ligne vide obligatoire
+
+            // Envoi du contenu du fichier
+            os.write(b);
+
+        } catch (Exception e) {
+            // Si le fichier n'est pas trouvé
+            System.err.println("Fichier non trouvé : " + f.getAbsolutePath());
+            OutputStream os = clientSocket.getOutputStream();
+            String notFound = "<html><body><h1>404 Not Found</h1></body></html>";
+
+            os.write("HTTP/1.1 404 Not Found\r\n".getBytes());
+            os.write("Content-Type: text/html\r\n".getBytes());
+            os.write(("Content-Length: " + notFound.getBytes().length + "\r\n").getBytes());
+            os.write("\r\n".getBytes());
+            os.write(notFound.getBytes());
+        } finally {
+            clientSocket.close();
         }
     }
 }
