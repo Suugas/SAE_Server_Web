@@ -21,7 +21,7 @@
 3. Retourner un fichier par défaut ou la liste des fichiers et répertoires présents (avec des liens
    pour naviguer). ✅
 4. Gérer des paramètres de gestion du cache.
-5. Enregistrer les accès et les erreurs dans des fichiers distincts
+5. Enregistrer les accès et les erreurs dans des fichiers distincts ✅
 6. La possibilité d’afficher l’état de la machine
 7. Encoder les ressources en gzip.
 8. Retourner les paramètres de base (Date, Server)

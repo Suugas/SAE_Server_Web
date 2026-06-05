@@ -119,6 +119,7 @@ public class Server {
                 html.append("<html><head><meta charset=\"UTF-8\"><title>Index de /</title></head><body>");
                 html.append("<h1>Index de / (").append(site.DocumentRoot).append(")</h1><hr><ul>");
 
+
                 if (dir.exists() && dir.isDirectory()) {
                     File[] files = dir.listFiles();
                     if (files != null) {
@@ -173,6 +174,12 @@ public class Server {
         File f = new File(site.DocumentRoot + file);
 
         try {
+            String mess = clientSocket.getPort() + ": " + clientSocket.getInetAddress() + " --> " + ct + '\n';
+            File access = new File(site.Acceslog);
+            FileWriter fw = new FileWriter(access, true);
+            fw.write(mess);
+            fw.close();
+
             byte[] b = Files.readAllBytes(f.toPath());
             OutputStream os = clientSocket.getOutputStream();
 
@@ -186,6 +193,14 @@ public class Server {
 
         } catch (Exception e) {
             // Si le fichier n'est pas trouvé
+
+            String errorMessage = clientSocket.getPort() + ": " + clientSocket.getInetAddress() + " --> "  + ct + '\n';
+            // Charger les fichiers d'erreurs et d'accès
+            File error = new File(site.Errorlog);
+            FileWriter fw = new FileWriter(error, true);
+            fw.write(errorMessage);
+            fw.close();
+
             System.err.println("Fichier non trouvé : " + f.getAbsolutePath());
             OutputStream os = clientSocket.getOutputStream();
             String notFound = "<html><body><h1>404 Not Found</h1></body></html>";
