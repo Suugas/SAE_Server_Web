@@ -1,0 +1,15 @@
+<webconf>
+ <site>
+  <port>80</port>
+  <DocumentRoot>/var/www</DocumentRoot>
+  <DefaultIndex>index.html</DefaultIndex>
+  <Acceslog>/var/log/myweb/access.log</Acceslog>
+  <Errorlog>/var/log/myweb/error.log</Errorlog>
+ </site>
+ <site>
+  <port>8080</port>
+  <DocumentRoot>/var/www2</DocumentRoot>
+  <Acceslog>/var/log/myweb/access.log</Acceslog>
+  <Errorlog>/var/log/myweb/error.log</Errorlog>
+ </site>
+</webconf>
