@@ -11,11 +11,13 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.nio.file.Files;
 import java.security.MessageDigest;
+import java.text.SimpleDateFormat;
 import java.time.Instant;
 import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 import java.util.Locale;
 import java.util.regex.Matcher;
@@ -296,6 +298,8 @@ public class Server {
         // --- 6. Lire le fichier ---
         File f = new File(site.DocumentRoot + file);
 
+        System.out.println("Info serveur: " + new SimpleDateFormat("EEE, dd MMM yyyy HH:mm:ss zzz", Locale.US).format(new Date(System.currentTimeMillis())) + " - Port : " + clientSocket.getPort());
+
         try {
             byte[] b = Files.readAllBytes(f.toPath());
 
@@ -311,6 +315,12 @@ public class Server {
                 b = processed.getBytes(java.nio.charset.StandardCharsets.UTF_8);
             }
             OutputStream os = clientSocket.getOutputStream();
+
+            String mess = clientSocket.getPort() + ": " + clientSocket.getInetAddress() + " --> " + ct + '\n';
+            File access = new File(site.Acceslog);
+            FileWriter fw = new FileWriter(access, true);
+            fw.write(mess);
+            fw.close();
 
             // ==============================================
             //  GESTION DU CACHE
@@ -380,6 +390,19 @@ public class Server {
             os.write(responseBody);
 
         } catch (Exception e) {
+            String errorMessage = clientSocket.getPort() + ": " + clientSocket.getInetAddress() + " --> "  + ct + '\n';
+            // Charger les fichiers d'erreurs et d'accès
+            File error = new File(site.Errorlog);
+            FileWriter fw = new FileWriter(error, true);
+            fw.write(errorMessage);
+            fw.close();
+
+            String mess = clientSocket.getPort() + ": " + clientSocket.getInetAddress() + " --> " + ct + '\n';
+            File access = new File(site.Acceslog);
+            FileWriter fg = new FileWriter(access, true);
+            fg.write(mess);
+            fg.close();
+
             System.err.println("Fichier non trouvé : " + f.getAbsolutePath());
             send404(clientSocket);
         } finally {
