@@ -1,0 +1,17 @@
+<!-- APRÈS (chemins Windows) -->
+<webconf>
+ <site>
+  <port>80</port>
+  <DocumentRoot>src\serveurWeb\var\www</DocumentRoot>
+  <DefaultIndex>index.html</DefaultIndex>
+  <Acceslog>src\serveurWeb\var\log\myweb\access.log</Acceslog>
+  <Errorlog>src\serveurWeb\var\log\myweb\error.log</Errorlog>
+ </site>
+
+<site>
+ <port>8080</port>
+ <DocumentRoot>src\serveurWeb\var\www2</DocumentRoot>
+ <Acceslog>src\serveurWeb\var\log\myweb\access.log</Acceslog>
+ <Errorlog>src\serveurWeb\var\log\myweb\error.log</Errorlog>
+</site>
+</webconf>
