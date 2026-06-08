@@ -18,6 +18,8 @@ import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.zip.GZIPOutputStream;
 
 
@@ -54,7 +56,7 @@ public class Server {
         DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
         DocumentBuilder builder = factory.newDocumentBuilder();
 
-        Document doc = builder.parse(new File("src/serverWeb.conf.xml"));
+        Document doc = builder.parse(new File("C:\\Users\\fugna\\Downloads\\SAE_Server_Web-main (1)\\SAE_Server_Web-main\\SAE_Server_Web\\src\\serverWeb.conf.xml"));
         doc.getDocumentElement().normalize();
 
         NodeList listeSites = doc.getElementsByTagName("site");
@@ -105,6 +107,91 @@ public class Server {
         return HTTP_DATE_FORMAT.format(
                 ZonedDateTime.ofInstant(Instant.ofEpochMilli(lastModifiedMillis), ZoneOffset.UTC)
         );
+    }
+
+    // =========================================================
+    //  QUESTION 9 — Code dynamique
+    //  Cherche les balises <code interpreteur="...">...</code>
+    //  dans le HTML, exécute le code, et remplace la balise
+    //  par la sortie du programme.
+    // =========================================================
+    private static String processCodeTags(String html) {
+        // Regex : capture l'interpréteur et le code entre les balises
+        // Supporte les guillemets droits " et les guillemets typographiques «»
+        Pattern pattern = Pattern.compile(
+                "<code\\s+interpreteur=[\"«]([^\"»]+)[\"»]>(.*?)</code>",
+                Pattern.DOTALL | Pattern.CASE_INSENSITIVE
+        );
+
+        Matcher matcher = pattern.matcher(html);
+        StringBuffer result = new StringBuffer();
+
+        while (matcher.find()) {
+            String interpreteur = matcher.group(1).trim(); // ex: /bin/bash
+            String code         = matcher.group(2).trim(); // ex: date
+
+            String output = executeCode(interpreteur, code);
+
+            // Remplace la balise entière par la sortie du programme
+            matcher.appendReplacement(result, Matcher.quoteReplacement(output));
+        }
+        matcher.appendTail(result);
+
+        return result.toString();
+    }
+
+    // =========================================================
+    //  QUESTION 9 — Exécution du code via un interpréteur
+    //  Adapte automatiquement les chemins Linux → Windows pour Python
+    // =========================================================
+    private static String executeCode(String interpreteur, String code) {
+        try {
+            boolean isWindows = System.getProperty("os.name").toLowerCase().contains("windows");
+
+            // ✅ Adaptation du chemin Python Linux → Windows
+            if (isWindows) {
+                interpreteur = interpreteur
+                        .replace("/usr/bin/python3", "python")
+                        .replace("/usr/bin/python",  "python")
+                        .replace("/bin/python3",      "python")
+                        .replace("/bin/python",       "python");
+            }
+
+            // Écrit le code dans un fichier temporaire .py
+            File tempFile = File.createTempFile("dyncode_", ".py");
+            tempFile.deleteOnExit();
+            try (FileWriter fw = new FileWriter(tempFile, java.nio.charset.StandardCharsets.UTF_8)) {
+                fw.write(code);
+            }
+
+            ProcessBuilder pb = new ProcessBuilder(interpreteur, tempFile.getAbsolutePath());
+            pb.redirectErrorStream(true);
+
+            // ✅ Force Python à afficher en UTF-8 sur Windows (évite les Ã©)
+            if (isWindows) {
+                pb.environment().put("PYTHONUTF8", "1");
+                pb.environment().put("PYTHONIOENCODING", "utf-8");
+            }
+
+            Process process = pb.start();
+
+            // ✅ Lecture en UTF-8
+            StringBuilder output = new StringBuilder();
+            try (BufferedReader reader = new BufferedReader(
+                    new InputStreamReader(process.getInputStream(), java.nio.charset.StandardCharsets.UTF_8))) {
+                String line;
+                while ((line = reader.readLine()) != null) {
+                    output.append(line).append(" ");
+                }
+            }
+
+            process.waitFor();
+            tempFile.delete();
+            return output.toString().trim();
+
+        } catch (Exception e) {
+            return "[Erreur exécution : " + e.getMessage() + "]";
+        }
     }
 
     // =========================================================
@@ -211,6 +298,18 @@ public class Server {
 
         try {
             byte[] b = Files.readAllBytes(f.toPath());
+
+            // ==============================================
+            //  QUESTION 9 — Code dynamique dans les pages HTML
+            //  Si c'est du HTML, on cherche les balises <code interpreteur=...>
+            //  et on remplace par la sortie de l'exécution
+            // ==============================================
+            if (ct.equals("text/html")) {
+                // ✅ UTF-8 pour éviter les caractères cassés (Ã©)
+                String htmlContent = new String(b, java.nio.charset.StandardCharsets.UTF_8);
+                String processed   = processCodeTags(htmlContent);
+                b = processed.getBytes(java.nio.charset.StandardCharsets.UTF_8);
+            }
             OutputStream os = clientSocket.getOutputStream();
 
             // ==============================================

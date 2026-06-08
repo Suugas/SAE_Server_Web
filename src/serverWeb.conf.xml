@@ -1,15 +1,17 @@
+<!-- APRÈS (chemins Windows) -->
 <webconf>
  <site>
   <port>80</port>
-  <DocumentRoot>src/var/www</DocumentRoot>
+  <DocumentRoot>C:\Users\fugna\Downloads\SAE_Server_Web-main (1)\SAE_Server_Web-main\SAE_Server_Web\src\var\www</DocumentRoot>
   <DefaultIndex>index.html</DefaultIndex>
-  <Acceslog>src/var/log/myweb/access.log</Acceslog>
-  <Errorlog>src/var/log/myweb/error.log</Errorlog>
+  <Acceslog>C:\Users\fugna\Downloads\SAE_Server_Web-main (1)\SAE_Server_Web-main\SAE_Server_Web\src\var\log\myweb\access.log</Acceslog>
+  <Errorlog>C:\Users\fugna\Downloads\SAE_Server_Web-main (1)\SAE_Server_Web-main\SAE_Server_Web\src\var\log\myweb\error.log</Errorlog>
  </site>
- <site>
-  <port>8080</port>
-  <DocumentRoot>src/var/www2</DocumentRoot>
-  <Acceslog>src/var/log/myweb/access.log</Acceslog>
-  <Errorlog>src/var/log/myweb/error.log</Errorlog>
- </site>
+
+<site>
+ <port>8080</port>
+ <DocumentRoot>C:\Users\fugna\Downloads\SAE_Server_Web-main (1)\SAE_Server_Web-main\SAE_Server_Web\src\var\www2</DocumentRoot>
+ <Acceslog>C:\Users\fugna\Downloads\SAE_Server_Web-main (1)\SAE_Server_Web-main\SAE_Server_Web\src\var\log\myweb\access.log</Acceslog>
+ <Errorlog>C:\Users\fugna\Downloads\SAE_Server_Web-main (1)\SAE_Server_Web-main\SAE_Server_Web\src\var\log\myweb\error.log</Errorlog>
+</site>
 </webconf>
