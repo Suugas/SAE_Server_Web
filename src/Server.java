@@ -10,8 +10,11 @@ import java.io.*;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.nio.file.Files;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
+import java.util.Locale;
 
 
 public class Server {
@@ -63,32 +66,6 @@ public class Server {
         NodeList liste = parent.getElementsByTagName(balise);
         if (liste.getLength() == 0) return null;
         return liste.item(0).getTextContent().trim();
-    }
-
-    public static void main(String[] args) throws IOException, ParserConfigurationException, SAXException {
-        Server server = new Server();
-        server.Load();
-
-        for (Site s: server.sites) {
-            int port = s.port;
-            ServerSocket serv = new ServerSocket(port);
-            new Thread(() -> {
-                while (true) {
-                    Socket sock = null;
-                    try {
-                        sock = serv.accept();
-                    } catch (IOException e) {
-                        throw new RuntimeException(e);
-                    }
-                    try {
-                        Server.handleClient(sock, s);
-                    } catch (IOException e) {
-                        throw new RuntimeException(e);
-                    }
-                }
-
-            }).start();
-        }
     }
 
     private static void handleClient(Socket clientSocket, Site site) throws IOException {
@@ -172,7 +149,7 @@ public class Server {
 
         // Création du chemin vers le fichier demandé
         File f = new File(site.DocumentRoot + file);
-
+        System.out.println("Info serveur: " + new SimpleDateFormat("EEE, dd MMM yyyy HH:mm:ss zzz", Locale.US).format(new Date(System.currentTimeMillis())) + " - Port : " + clientSocket.getPort());
         try {
             String mess = clientSocket.getPort() + ": " + clientSocket.getInetAddress() + " --> " + ct + '\n';
             File access = new File(site.Acceslog);
@@ -191,7 +168,8 @@ public class Server {
             // Envoi du contenu du fichier
             os.write(b);
 
-        } catch (Exception e) {
+        }
+        catch (Exception e) {
             // Si le fichier n'est pas trouvé
 
             String errorMessage = clientSocket.getPort() + ": " + clientSocket.getInetAddress() + " --> "  + ct + '\n';
@@ -212,6 +190,32 @@ public class Server {
             os.write(notFound.getBytes());
         } finally {
             clientSocket.close();
+        }
+    }
+
+    public static void main(String[] args) throws IOException, ParserConfigurationException, SAXException {
+        Server server = new Server();
+        server.Load();
+
+        for (Site s: server.sites) {
+            int port = s.port;
+            ServerSocket serv = new ServerSocket(port);
+            new Thread(() -> {
+                while (true) {
+                    Socket sock = null;
+                    try {
+                        sock = serv.accept();
+                    } catch (IOException e) {
+                        throw new RuntimeException(e);
+                    }
+                    try {
+                        Server.handleClient(sock, s);
+                    } catch (IOException e) {
+                        throw new RuntimeException(e);
+                    }
+                }
+
+            }).start();
         }
     }
 }
