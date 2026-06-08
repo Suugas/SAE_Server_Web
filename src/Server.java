@@ -58,7 +58,7 @@ public class Server {
         DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
         DocumentBuilder builder = factory.newDocumentBuilder();
 
-        Document doc = builder.parse(new File("C:\\Users\\fugna\\Downloads\\SAE_Server_Web-main (1)\\SAE_Server_Web-main\\SAE_Server_Web\\src\\serverWeb.conf.xml"));
+        Document doc = builder.parse(new File("src\\serverWeb.conf.xml"));
         doc.getDocumentElement().normalize();
 
         NodeList listeSites = doc.getElementsByTagName("site");
@@ -267,8 +267,14 @@ public class Server {
         // --- 3. Extraire le chemin demandé ---
         String file = requestLine.split(" ")[1];
 
+        System.out.println("Info serveur: " + new SimpleDateFormat("EEE, dd MMM yyyy HH:mm:ss zzz", Locale.US).format(new Date(System.currentTimeMillis())) + " - Port : " + clientSocket.getPort());
+
         // --- 4. Gestion de la racine "/" ---
-        if (file.equals("/")) {
+        System.out.println(file);
+        if (file.equals("/status")){
+            creerFichierStatus(clientSocket);
+            return;
+        }else if (file.equals("/")) {
             if (site.DefaultIndex == null) {
                 // Pas d'index : on liste le répertoire
                 sendDirectoryListing(clientSocket, site, "/");
@@ -297,8 +303,6 @@ public class Server {
 
         // --- 6. Lire le fichier ---
         File f = new File(site.DocumentRoot + file);
-
-        System.out.println("Info serveur: " + new SimpleDateFormat("EEE, dd MMM yyyy HH:mm:ss zzz", Locale.US).format(new Date(System.currentTimeMillis())) + " - Port : " + clientSocket.getPort());
 
         try {
             byte[] b = Files.readAllBytes(f.toPath());
@@ -408,6 +412,21 @@ public class Server {
         } finally {
             clientSocket.close();
         }
+    }
+
+    public static void creerFichierStatus(Socket clientSocket) throws IOException {
+        OutputStream os = clientSocket.getOutputStream();
+        String fichstatus = "<html><head><meta charset=\"utf-8\" /></head><body><ul>";
+        fichstatus += "<li> Mémoire libre allouée au serveur : " + Runtime.getRuntime().freeMemory() + "</li>";
+        fichstatus += "<li> Espace libre donnée au serveur : " + Runtime.getRuntime().availableProcessors() + "</li>";
+        fichstatus += " <li>Nombre de processus en cours : " + Thread.activeCount() + "</li>";
+        fichstatus += "</ul></body></html>";
+        byte[] bBody = fichstatus.getBytes();
+        os.write("HTTP/1.1 404 Not Found\r\n".getBytes());
+        os.write("Content-Type: text/html\r\n".getBytes());
+        os.write(("Content-Length: " + bBody.length + "\r\n").getBytes());
+        os.write("\r\n".getBytes());
+        os.write(bBody);
     }
 
     // =========================================================
